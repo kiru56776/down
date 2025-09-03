@@ -8,14 +8,13 @@ import os
 import re
 from uuid import uuid4
 
-from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
     MessageHandler,
     filters,
-    InlineQueryHandler
 )
 from yt_dlp import YoutubeDL
 
@@ -44,7 +43,7 @@ def clean_filename(filename):
     """
     Removes invalid characters from a filename to make it safe for saving.
     """
-    return re.sub(r'[\/:*?"<>|]', '-', filename)
+    return re.sub(r'[\\/:*?"<>|]', '-', filename)
 
 async def search_youtube(query: str, max_results: int = 5) -> list:
     """
@@ -178,6 +177,9 @@ async def download_and_send_video(update: Update, context: ContextTypes.DEFAULT_
 
     status_message = await update.message.reply_text("Starting download... ⏳")
 
+    # Define the path for the cookie file. Render will place the secret file here.
+    cookie_file_path = 'cookies.txt'
+    
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
@@ -185,28 +187,32 @@ async def download_and_send_video(update: Update, context: ContextTypes.DEFAULT_
         'noplaylist': True,
     }
 
+    # *** IMPORTANT FIX ***
+    # Only add the cookiefile option if the cookies.txt file actually exists.
+    # This prevents errors if you run the bot locally without the file.
+    if os.path.exists(cookie_file_path):
+        logger.info("Using cookies file for download.")
+        ydl_opts['cookiefile'] = cookie_file_path
+    else:
+        logger.warning("cookies.txt not found. Proceeding without authentication. This may fail.")
+
+
     filepath = None
     try:
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            # Sanitize filename before creating the path
-            sanitized_title = clean_filename(info['title'])
-            filepath = os.path.join(DOWNLOAD_DIR, f"{sanitized_title}.{info['ext']}")
-            # The hook might not catch 100%, so we get the final path
             downloaded_file = ydl.prepare_filename(info)
 
-            # yt-dlp might add format suffixes, so we find the actual file
             if os.path.exists(downloaded_file):
-                 filepath = downloaded_file
-            elif not os.path.exists(filepath):
-                 logger.error(f"File not found at expected path: {filepath} or {downloaded_file}")
-                 await status_message.edit_text("❌ Error: Downloaded file not found on server.")
-                 return
-
+                filepath = downloaded_file
+            else:
+                logger.error(f"File not found at expected path: {downloaded_file}")
+                await status_message.edit_text("❌ Error: Downloaded file not found on server.")
+                return
 
     except Exception as e:
         logger.error(f"Error during video download: {e}")
-        await status_message.edit_text(f"❌ An error occurred during download: {e}")
+        await status_message.edit_text(f"❌ An error occurred during download. This is often due to YouTube restrictions. Using a cookies file can help solve this.")
         return
 
     if filepath and os.path.exists(filepath):
@@ -236,15 +242,12 @@ def progress_hook(d, status_message, bot):
     A hook function for yt-dlp to report download progress.
     """
     if d['status'] == 'downloading':
-        percent = d['_percent_str']
-        speed = d['_speed_str']
-        eta = d['_eta_str']
-        # To avoid spamming Telegram APIs, we might only update every few seconds
-        # For this example, we'll just log it. A more advanced bot could update the message.
-        logger.info(f"{percent} of {d['total_bytes_str']} at {speed} ETA {eta}")
-        # await bot.edit_message_text(text=f"Downloading... {percent}", chat_id=status_message.chat_id, message_id=status_message.message_id)
+        percent = d.get('_percent_str', 'N/A')
+        speed = d.get('_speed_str', 'N/A')
+        eta = d.get('_eta_str', 'N/A')
+        logger.info(f"Downloading: {percent} at {speed}, ETA {eta}")
     elif d['status'] == 'finished':
-        logger.info("Download finished, now converting...")
+        logger.info("Download finished, preparing to upload...")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
