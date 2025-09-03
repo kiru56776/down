@@ -100,7 +100,6 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     chat_id = update.message.chat_id
     text = update.message.text
 
-    # Using regex to parse the command
     match = re.match(r'Search\s+(\d+)\s+(.+)', text, re.IGNORECASE)
 
     if not match:
@@ -115,22 +114,17 @@ async def handle_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     await update.message.reply_text(f"Searching for the top {num_videos} videos about '{query}'...")
-
     videos = await search_youtube(query, max_results=num_videos)
 
     if not videos:
         await update.message.reply_text("Sorry, I couldn't find any videos for your search.")
         return
 
-    # Store results for the user
     user_search_results[chat_id] = videos
-
-    # Format the reply
     response_message = "Here are the results:\n\n"
     for i, video in enumerate(videos, 1):
         response_message += f"{i}. {video['title']}\n"
     response_message += "\nTo download, reply with `Download <number>` (e.g., `Download 1`)."
-
     await update.message.reply_text(response_message)
 
 async def handle_download_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -177,9 +171,14 @@ async def download_and_send_video(update: Update, context: ContextTypes.DEFAULT_
 
     status_message = await update.message.reply_text("Starting download... ⏳")
 
-    # Define the path for the cookie file. Render will place the secret file here.
+    # --- START OF DEBUGGING CODE ---
+    current_directory = os.getcwd()
+    logger.info(f"Current working directory: {current_directory}")
+    files_in_directory = os.listdir(current_directory)
+    logger.info(f"Files in directory: {files_in_directory}")
+    # --- END OF DEBUGGING CODE ---
+
     cookie_file_path = 'cookies.txt'
-    
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
@@ -187,41 +186,38 @@ async def download_and_send_video(update: Update, context: ContextTypes.DEFAULT_
         'noplaylist': True,
     }
 
-    # *** IMPORTANT FIX ***
-    # Only add the cookiefile option if the cookies.txt file actually exists.
-    # This prevents errors if you run the bot locally without the file.
     if os.path.exists(cookie_file_path):
-        logger.info("Using cookies file for download.")
+        logger.info(f"SUCCESS: Found '{cookie_file_path}' and will use it for download.")
         ydl_opts['cookiefile'] = cookie_file_path
     else:
-        logger.warning("cookies.txt not found. Proceeding without authentication. This may fail.")
-
+        logger.warning(f"WARNING: '{cookie_file_path}' not found. Proceeding without authentication. This may fail.")
 
     filepath = None
     try:
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             downloaded_file = ydl.prepare_filename(info)
-
             if os.path.exists(downloaded_file):
                 filepath = downloaded_file
             else:
                 logger.error(f"File not found at expected path: {downloaded_file}")
                 await status_message.edit_text("❌ Error: Downloaded file not found on server.")
                 return
-
     except Exception as e:
         logger.error(f"Error during video download: {e}")
-        await status_message.edit_text(f"❌ An error occurred during download. This is often due to YouTube restrictions. Using a cookies file can help solve this.")
+        error_message = str(e)
+        if "confirm you’re not a bot" in error_message:
+            await status_message.edit_text("❌ Download failed: YouTube is blocking the request. The cookie file might be expired or invalid.")
+        else:
+            await status_message.edit_text(f"❌ An error occurred during download.")
         return
 
     if filepath and os.path.exists(filepath):
         await status_message.edit_text("Download complete! Now uploading to Telegram... 🚀")
         try:
-            # Telegram has a 50MB upload limit for bots.
             if os.path.getsize(filepath) > 50 * 1024 * 1024:
                 await update.message.reply_text(
-                    f"⚠️ The video '{os.path.basename(filepath)}' is larger than 50MB and cannot be sent directly via Telegram."
+                    f"⚠️ The video '{os.path.basename(filepath)}' is larger than 50MB and cannot be sent via Telegram."
                 )
             else:
                 with open(filepath, 'rb') as video_file:
@@ -230,7 +226,6 @@ async def download_and_send_video(update: Update, context: ContextTypes.DEFAULT_
             logger.error(f"Error uploading video to Telegram: {e}")
             await update.message.reply_text("❌ Failed to upload the video to Telegram.")
         finally:
-            # Clean up the downloaded file
             os.remove(filepath)
             await status_message.delete()
     else:
@@ -258,17 +253,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not text:
         return
 
-    # Check for YouTube URL
     if 'youtube.com/' in text or 'youtu.be/' in text:
         await download_and_send_video(update, context, text)
-    # Check for Search command
     elif text.lower().startswith('search '):
         await handle_search(update, context)
-    # Check for Download command
     elif text.lower().startswith('download '):
         await handle_download_command(update, context)
     else:
-        # This can be a catch-all or a help message
         await update.message.reply_text(
             "I'm not sure what you mean. Please send a YouTube link, or use the `Search` or `Download` commands."
         )
@@ -282,19 +273,12 @@ def main() -> None:
         logger.error("Telegram bot token not set! Please set the TELEGRAM_TOKEN environment variable.")
         return
 
-    # Create the Application and pass it your bot's token.
     application = Application.builder().token(TELEGRAM_TOKEN).build()
-
-    # --- Register Handlers ---
     application.add_handler(CommandHandler("start", start))
-
-    # Add a message handler that filters for text messages and calls the main logic
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
     logger.info("Bot is starting...")
-
-    # Run the bot until the user presses Ctrl-C
     application.run_polling()
 
 if __name__ == '__main__':
     main()
+
