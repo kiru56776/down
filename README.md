@@ -1,89 +1,107 @@
-YouTube Downloader Telegram Bot
+🚀 YouTube Downloader Telegram Bot 🚀
 
-This is a simple but powerful Telegram bot that can search for YouTube videos and download them for you directly in your chat.
+Welcome to your personal YouTube Downloader Telegram Bot! This powerful yet simple bot allows you to grab videos directly from YouTube without ever leaving your Telegram chat.
 
-Features
+✨ Core Features
 
-Direct Download: Send any YouTube video link to the bot to download it.
+🔗 Direct Download: Simply send any YouTube video link to the bot, and it will download and send the video back to you.
 
-Video Search: Search for videos using a command like Search 5 latest news.
+🔍 Powerful Video Search: Can't remember the link? No problem! Use the search command to find videos.
 
-Selective Download: After a search, download a specific video by its number (e.g., Download 3).
+Example: Search 5 latest Ethiopian news
 
-Download All: Download all videos from the search results one by one with Download all.
+🔢 Selective Download: After searching, you can download a specific video by its number from the list.
 
-How to Set Up and Deploy
+Example: Download 3
 
-Follow these steps to get your own instance of this bot running on Render.
+📥 Download All: Want all the videos from your search? Just type Download all, and the bot will fetch them for you one by one.
 
-Step 1: Create a Telegram Bot
+🛠️ How to Set Up and Deploy on Render
 
-Talk to BotFather: Open Telegram and search for the @BotFather user.
+Follow these steps to launch your very own instance of this bot. We'll use GitHub for storing the code and Render for hosting it online 24/7.
 
-Create a New Bot: Send the /newbot command to BotFather.
+Step 1: Create Your Telegram Bot
 
-Choose a Name and Username: Follow the prompts to give your bot a friendly name (e.g., "My Video Bot") and a unique username (which must end in bot, e.g., MyVideoDownloader_bot).
+First, you need to get your bot's "key," which is an API token from Telegram itself.
 
-Get Your Token: BotFather will give you a unique HTTP API token. It will look something like 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11. Copy this token and keep it safe! This is your bot's password.
+Talk to the BotFather: Open your Telegram app and search for the official @BotFather account (it has a blue checkmark).
 
-Step 2: Set Up Your Project on GitHub
+Create a New Bot: Start a chat with BotFather and send the /newbot command.
 
-Create a GitHub Account: If you don't have one, sign up at GitHub.
+Choose a Name & Username:
 
-Create a New Repository: Create a new public or private repository for this project.
+First, give your bot a friendly display name (e.g., KT's Video Bot).
 
-Upload the Files: Upload the three files from this project (telegram_bot.py, requirements.txt, and README.md) into your new repository.
+Next, choose a unique username that must end in bot (e.g., KTsVideoDownloader_bot).
 
-Step 3: Deploy to Render
+🔑 Get Your API Token: BotFather will congratulate you and provide a long HTTP API token. It will look something like 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11.
 
-Sign Up for Render: Create an account on Render.com. They have a free tier that is perfect for this kind of bot.
+This token is your bot's password. Copy it immediately and keep it safe!
 
-Create a New Web Service:
+Step 2: Set Up Your GitHub Repository
 
-On your Render dashboard, click "New +" and select "Web Service".
+This is where your bot's code will live.
+
+Create a GitHub Account: If you don't have one, sign up for free at GitHub.com.
+
+Create a New Repository: Click the + icon in the top right and select "New repository". You can make it public or private.
+
+Upload the Project Files: In your new repository, upload the three files I provided:
+
+telegram_bot.py
+
+requirements.txt
+
+README.md (this file!)
+
+Step 3: Deploy the Bot on Render
+
+Render is a cloud service that will run your bot for free.
+
+Sign Up for Render: Create a free account at Render.com.
+
+Create a New "Web Service":
+
+From your Render dashboard, click "New +" and choose "Web Service".
 
 Connect your GitHub account and select the repository you just created.
 
-Configure the Service:
+Configure the Service Settings:
 
-Name: Give your service a unique name (e.g., my-telegram-bot).
+Name: Give your service a unique name (e.g., kt-telegram-bot).
 
-Region: Choose a region close to you.
+Region: Choose a region that is geographically close to you.
 
-Branch: Select main or master.
+Branch: Select your main branch (usually main or master).
 
-Root Directory: Leave this blank.
+Runtime: Render should automatically detect Python 3.
 
-Runtime: Render should automatically detect it as a Python project.
+Build Command: This should default to pip install -r requirements.txt. This is correct.
 
-Build Command: This should be automatically set to pip install -r requirements.txt.
+Start Command: Enter the command python telegram_bot.py.
 
-Start Command: Enter python telegram_bot.py.
+Instance Type: The Free tier is perfect for this bot.
 
-Instance Type: The Free tier is sufficient.
+Add Your Secret Token (CRUCIAL STEP!):
 
-Add Environment Variables (Crucial!):
-
-Before deploying, go to the "Environment" tab for your new service.
+Before you deploy, scroll down and find the "Environment" section.
 
 Click "Add Environment Variable".
 
-For the Key, enter TELEGRAM_TOKEN.
+For the Key, enter exactly: TELEGRAM_TOKEN
 
-For the Value, paste the HTTP API token you got from BotFather.
+For the Value, paste the HTTP API token you saved from BotFather.
 
-Click "Save Changes".
+Click "Save Changes". This keeps your token secure and out of your code.
 
-Deploy!:
+🚀 Launch!:
 
-Click the "Create Web Service" button.
+Scroll to the bottom and click the "Create Web Service" button.
 
-Render will now pull your code from GitHub, install the libraries from requirements.txt, and run your telegram_bot.py script using the start command.
+Render will now build and start your bot. You can monitor the progress in the "Logs" tab. Once you see a message like Bot is starting..., your bot is live!
 
-You can watch the deployment progress in the "Logs" tab. If everything is correct, you'll see a message like "Bot is starting...".
+Step 4: Start Chatting With Your Bot!
 
-Step 4: Use Your Bot!
+Open Telegram, search for your bot by its username, and send the /start command. It's now ready to follow your commands!
 
-Open Telegram, find the bot you created, and send the /start command. It should now be fully operational!
-
-Note: Telegram has a 50MB file size limit for bots. This bot will warn you if a video is larger than that size and will not be able to send it.
+⚠️ Important Note: Telegram has a file size limit of 50MB for bots. This bot will automatically check the file size and warn you if a video is too large to be uploaded.
